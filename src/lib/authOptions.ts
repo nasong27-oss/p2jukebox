@@ -1,18 +1,20 @@
 import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+import SpotifyProvider from "next-auth/providers/spotify";
+
+const SPOTIFY_SCOPES = [
+  "playlist-modify-public",
+  "playlist-modify-private",
+  "user-read-email",
+].join(" ");
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    SpotifyProvider({
+      clientId: process.env.SPOTIFY_CLIENT_ID!,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
       authorization: {
         params: {
-          // Request YouTube manage scope + offline access for refresh token
-          scope:
-            "openid email profile https://www.googleapis.com/auth/youtube",
-          access_type: "offline",
-          prompt: "consent",
+          scope: SPOTIFY_SCOPES,
         },
       },
     }),
@@ -20,7 +22,6 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async jwt({ token, account }) {
-      // On first sign in, account is available
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;

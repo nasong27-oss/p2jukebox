@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
-import { fetchPlaylistItems } from "@/lib/youtube";
+import { fetchPlaylistTracks } from "@/lib/spotify";
+import { getNicknames } from "@/lib/nicknameStore";
 
 export async function GET() {
   try {
-    const items = await fetchPlaylistItems();
-    return NextResponse.json({ items });
+    const items = await fetchPlaylistTracks();
+
+    // Merge stored nicknames
+    const nicknames = getNicknames(items.map((i) => i.trackUri));
+    const merged = items.map((item) => ({
+      ...item,
+      addedBy: nicknames[item.trackUri] ?? "",
+    }));
+
+    return NextResponse.json({ items: merged });
   } catch (err) {
     console.error("[/api/playlist/list]", err);
     return NextResponse.json(

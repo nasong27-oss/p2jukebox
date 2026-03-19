@@ -36,12 +36,12 @@ export function PlaylistView({
       {/* Section header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <ListMusic className="w-5 h-5 text-brand-500" />
+          <ListMusic className="w-5 h-5 text-[#1DB954]" />
           <h2 className="font-semibold text-gray-900 dark:text-white">
             현재 플레이리스트
           </h2>
           {!isLoading && (
-            <span className="text-xs bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2 py-0.5 rounded-full font-medium">
+            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
               {items.length}곡
             </span>
           )}
@@ -49,7 +49,7 @@ export function PlaylistView({
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors py-1 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-[#1DB954] dark:hover:text-[#1DB954] transition-colors py-1 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <RefreshCw
             className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
@@ -67,7 +67,7 @@ export function PlaylistView({
               className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700"
             >
               <div className="w-6 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse flex-shrink-0" />
-              <div className="w-20 h-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0" />
+              <div className="w-14 h-14 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 <div className="h-3 bg-gray-100 dark:bg-gray-600 rounded animate-pulse w-2/3" />
@@ -79,7 +79,7 @@ export function PlaylistView({
 
       {/* Loading overlay when refreshing with existing items */}
       {isLoading && items.length > 0 && (
-        <div className="flex items-center justify-center gap-2 py-2 text-sm text-brand-500">
+        <div className="flex items-center justify-center gap-2 py-2 text-sm text-[#1DB954]">
           <Loader2 className="w-4 h-4 animate-spin" />
           업데이트 중...
         </div>
@@ -102,7 +102,7 @@ export function PlaylistView({
       <div className="space-y-2">
         {items.map((item, index) => (
           <div
-            key={item.playlistItemId}
+            key={item.trackUri}
             className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-gray-100 dark:border-gray-700 group"
           >
             {/* Position */}
@@ -110,15 +110,15 @@ export function PlaylistView({
               {index + 1}
             </span>
 
-            {/* Thumbnail */}
-            <div className="relative flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
+            {/* Album Art */}
+            <div className="relative flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
               {item.thumbnail ? (
                 <Image
                   src={item.thumbnail}
                   alt={item.title}
                   fill
                   className="object-cover"
-                  sizes="80px"
+                  sizes="56px"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300">
@@ -128,28 +128,25 @@ export function PlaylistView({
                     fill="currentColor"
                     className="w-6 h-6"
                   >
-                    <path d="M8 5v14l11-7z" />
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
                   </svg>
                 </div>
               )}
-              <span className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded font-mono leading-none">
-                {item.duration}
-              </span>
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
               <a
-                href={`https://www.youtube.com/watch?v=${item.videoId}`}
+                href={`https://open.spotify.com/track/${item.trackId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium text-gray-900 dark:text-white hover:text-brand-600 dark:hover:text-brand-400 line-clamp-2 leading-snug transition-colors"
+                className="text-sm font-medium text-gray-900 dark:text-white hover:text-[#1DB954] line-clamp-2 leading-snug transition-colors"
               >
                 {item.title}
               </a>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px]">
-                  {item.channelTitle}
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
+                  {item.artistName}
                 </span>
                 <span className="flex items-center gap-0.5 text-xs text-gray-400 flex-shrink-0">
                   <Clock className="w-3 h-3" />

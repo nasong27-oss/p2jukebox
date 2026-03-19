@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/authOptions";
-import { reorderPlaylistItem } from "@/lib/youtube";
+import { reorderPlaylistTrack } from "@/lib/spotify";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -9,35 +9,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "관리자 로그인이 필요합니다." }, { status: 401 });
   }
 
-  let body: {
-    playlistItemId?: string;
-    videoId?: string;
-    newPosition?: number;
-    note?: string;
-  };
+  let body: { rangeStart?: number; insertBefore?: number };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
   }
 
-  const { playlistItemId, videoId, newPosition, note = "" } = body;
-
-  if (!playlistItemId || !videoId || newPosition === undefined) {
+  const { rangeStart, insertBefore } = body;
+  if (rangeStart === undefined || insertBefore === undefined) {
     return NextResponse.json(
-      { error: "playlistItemId, videoId, newPosition이 필요합니다." },
+      { error: "rangeStart, insertBefore 가 필요합니다." },
       { status: 400 }
     );
   }
 
   try {
-    const result = await reorderPlaylistItem(
-      playlistItemId,
-      videoId,
-      newPosition,
-      note
-    );
-    return NextResponse.json({ success: true, item: result });
+    const result = await reorderPlaylistTrack(rangeStart, insertBefore);
+    return NextResponse.json({ success: true, result });
   } catch (err) {
     console.error("[/api/playlist/reorder]", err);
     const message =

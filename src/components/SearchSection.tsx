@@ -2,10 +2,10 @@
 
 import { useState, useRef } from "react";
 import { Search, X, Loader2 } from "lucide-react";
-import type { VideoSearchResult } from "@/types";
+import type { TrackSearchResult } from "@/types";
 
 interface Props {
-  onResults: (results: VideoSearchResult[]) => void;
+  onResults: (results: TrackSearchResult[]) => void;
   onLoading: (loading: boolean) => void;
   isLoading: boolean;
 }
@@ -50,7 +50,7 @@ export function SearchSection({ onResults, onLoading, isLoading }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="노래 제목, 아티스트 검색..."
-            className="w-full pl-11 pr-10 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent shadow-sm transition-all"
+            className="w-full pl-11 pr-10 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1DB954] focus:border-transparent shadow-sm transition-all"
           />
           {query && (
             <button
@@ -66,7 +66,7 @@ export function SearchSection({ onResults, onLoading, isLoading }: Props) {
         <button
           type="submit"
           disabled={!query.trim() || isLoading}
-          className="flex items-center gap-2 px-5 py-3 bg-brand-600 hover:bg-brand-700 disabled:bg-brand-300 dark:disabled:bg-brand-800 text-white font-medium rounded-xl shadow-sm transition-colors whitespace-nowrap"
+          className="flex items-center gap-2 px-5 py-3 bg-[#1DB954] hover:bg-[#1aa34a] disabled:opacity-50 text-white font-medium rounded-xl shadow-sm transition-colors whitespace-nowrap"
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />

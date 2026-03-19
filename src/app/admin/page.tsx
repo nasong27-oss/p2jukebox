@@ -17,7 +17,7 @@ export default function AdminPage() {
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -26,13 +26,13 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
         <div className="flex items-center gap-3 mb-8">
-          <KeyRound className="w-8 h-8 text-brand-500" />
+          <KeyRound className="w-8 h-8 text-green-500" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
               관리자 설정
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              공동 주크박스 관리자 권한 설정
+              공동 주크박스 Spotify 권한 설정
             </p>
           </div>
         </div>
@@ -44,11 +44,11 @@ export default function AdminPage() {
               <div className="text-sm text-amber-800 dark:text-amber-200">
                 <p className="font-semibold mb-1">최초 1회 설정 필요</p>
                 <p>
-                  Google 계정으로 로그인하여 YouTube 플레이리스트 수정 권한을
-                  앱에 부여해주세요. 로그인 후 발급된{" "}
+                  Spotify 계정으로 로그인하여 플레이리스트 수정 권한을 앱에
+                  부여해주세요. 로그인 후 발급된{" "}
                   <strong>Refresh Token</strong>을{" "}
                   <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">
-                    GOOGLE_REFRESH_TOKEN
+                    SPOTIFY_REFRESH_TOKEN
                   </code>{" "}
                   환경 변수에 저장해야 팀원들이 곡을 추가할 수 있습니다.
                 </p>
@@ -56,11 +56,11 @@ export default function AdminPage() {
             </div>
 
             <button
-              onClick={() => signIn("google")}
-              className="w-full flex items-center justify-center gap-3 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+              onClick={() => signIn("spotify")}
+              className="w-full flex items-center justify-center gap-3 bg-[#1DB954] hover:bg-[#1aa34a] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
             >
               <LogIn className="w-5 h-5" />
-              Google 계정으로 로그인
+              Spotify 계정으로 로그인
             </button>
           </div>
         ) : (
@@ -95,7 +95,7 @@ export default function AdminPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   아래 토큰을 복사하여{" "}
                   <code className="bg-gray-100 dark:bg-gray-600 px-1 rounded">
-                    GOOGLE_REFRESH_TOKEN
+                    SPOTIFY_REFRESH_TOKEN
                   </code>{" "}
                   환경 변수에 저장하세요.
                 </p>
@@ -126,7 +126,7 @@ export default function AdminPage() {
                     </li>
                     <li>
                       <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
-                        GOOGLE_REFRESH_TOKEN
+                        SPOTIFY_REFRESH_TOKEN
                       </code>{" "}
                       키에 붙여넣기
                     </li>
@@ -138,8 +138,8 @@ export default function AdminPage() {
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-sm text-red-800 dark:text-red-200">
                 <p className="font-semibold mb-1">Refresh Token 없음</p>
                 <p>
-                  로그아웃 후 다시 로그인해주세요. Google OAuth에서 오프라인
-                  접근 권한이 부여되지 않았습니다.
+                  로그아웃 후 다시 로그인해주세요. Spotify OAuth 과정에서
+                  오프라인 접근 권한이 부여되지 않았습니다.
                 </p>
               </div>
             )}

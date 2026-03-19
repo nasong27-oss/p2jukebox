@@ -1,18 +1,19 @@
-export interface VideoSearchResult {
-  videoId: string;
+export interface TrackSearchResult {
+  trackId: string;
+  trackUri: string;
   title: string;
-  thumbnail: string;
-  channelTitle: string;
+  thumbnail: string; // album art URL
+  artistName: string;
   duration: string;
   isInPlaylist?: boolean;
 }
 
 export interface PlaylistItem {
-  playlistItemId: string;
-  videoId: string;
+  trackUri: string;
+  trackId: string;
   title: string;
   thumbnail: string;
-  channelTitle: string;
+  artistName: string;
   duration: string;
   addedBy: string;
   position: number;
@@ -26,8 +27,8 @@ export interface Toast {
 
 export interface NicknameModalState {
   isOpen: boolean;
-  videoId: string;
-  videoTitle: string;
+  trackUri: string;
+  trackTitle: string;
 }
 
 // next-auth augmentation

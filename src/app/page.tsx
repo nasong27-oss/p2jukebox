@@ -8,7 +8,11 @@ import { SearchResults } from "@/components/SearchResults";
 import { PlaylistView } from "@/components/PlaylistView";
 import { NicknameModal } from "@/components/NicknameModal";
 import { ToastProvider, useToast } from "@/components/Toast";
-import type { VideoSearchResult, PlaylistItem, NicknameModalState } from "@/types";
+import type {
+  TrackSearchResult,
+  PlaylistItem,
+  NicknameModalState,
+} from "@/types";
 
 function JukeboxApp() {
   const { data: session } = useSession();
@@ -16,14 +20,14 @@ function JukeboxApp() {
   const isAdmin = !!session;
 
   // State
-  const [searchResults, setSearchResults] = useState<VideoSearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<TrackSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [isPlaylistLoading, setIsPlaylistLoading] = useState(true);
   const [modal, setModal] = useState<NicknameModalState>({
     isOpen: false,
-    videoId: "",
-    videoTitle: "",
+    trackUri: "",
+    trackTitle: "",
   });
   const [isAdding, setIsAdding] = useState(false);
 
@@ -46,15 +50,15 @@ function JukeboxApp() {
   }, [fetchPlaylist]);
 
   // Enrich search results with "already in playlist" info
-  const playlistVideoIds = new Set(playlist.map((item) => item.videoId));
+  const playlistTrackUris = new Set(playlist.map((item) => item.trackUri));
   const enrichedResults = searchResults.map((r) => ({
     ...r,
-    isInPlaylist: playlistVideoIds.has(r.videoId),
+    isInPlaylist: playlistTrackUris.has(r.trackUri),
   }));
 
   // Handle add click – open nickname modal
-  const handleAddClick = (video: VideoSearchResult) => {
-    setModal({ isOpen: true, videoId: video.videoId, videoTitle: video.title });
+  const handleAddClick = (track: TrackSearchResult) => {
+    setModal({ isOpen: true, trackUri: track.trackUri, trackTitle: track.title });
   };
 
   // Handle nickname confirm – add to playlist
@@ -64,19 +68,21 @@ function JukeboxApp() {
       const res = await fetch("/api/playlist/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: modal.videoId, nickname }),
+        body: JSON.stringify({ trackUri: modal.trackUri, nickname }),
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error ?? "추가 실패");
-      }
+      if (!res.ok) throw new Error(data.error ?? "추가 실패");
 
-      addToast(`"${modal.videoTitle.slice(0, 30)}..." 을(를) 추가했어요! 🎵`, "success");
-      setModal({ isOpen: false, videoId: "", videoTitle: "" });
+      addToast(
+        `"${modal.trackTitle.slice(0, 30)}..." 을(를) 추가했어요! 🎵`,
+        "success"
+      );
+      setModal({ isOpen: false, trackUri: "", trackTitle: "" });
       await fetchPlaylist();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "곡 추가에 실패했습니다.";
+      const message =
+        err instanceof Error ? err.message : "곡 추가에 실패했습니다.";
       addToast(message, "error");
     } finally {
       setIsAdding(false);
@@ -90,44 +96,45 @@ function JukeboxApp() {
       const res = await fetch("/api/playlist/remove", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playlistItemId: item.playlistItemId }),
+        body: JSON.stringify({ trackUri: item.trackUri }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "삭제 실패");
       addToast("곡이 삭제되었습니다.", "info");
       await fetchPlaylist();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "삭제에 실패했습니다.";
+      const message =
+        err instanceof Error ? err.message : "삭제에 실패했습니다.";
       addToast(message, "error");
     }
   };
 
   // Admin: reorder
-  const handleReorder = async (item: PlaylistItem, direction: "up" | "down") => {
-    const currentIndex = playlist.findIndex(
-      (p) => p.playlistItemId === item.playlistItemId
-    );
-    const newPosition =
-      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  const handleReorder = async (
+    item: PlaylistItem,
+    direction: "up" | "down"
+  ) => {
+    const rangeStart = item.position;
+    // Spotify: insertBefore is the index BEFORE which to insert
+    // Moving up: insert before the previous item (rangeStart - 1)
+    // Moving down: insert before the item two positions ahead (rangeStart + 2)
+    const insertBefore =
+      direction === "up" ? rangeStart - 1 : rangeStart + 2;
 
-    if (newPosition < 0 || newPosition >= playlist.length) return;
+    if (insertBefore < 0 || insertBefore > playlist.length) return;
 
     try {
       const res = await fetch("/api/playlist/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          playlistItemId: item.playlistItemId,
-          videoId: item.videoId,
-          newPosition,
-          note: item.addedBy,
-        }),
+        body: JSON.stringify({ rangeStart, insertBefore }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "순서 변경 실패");
       await fetchPlaylist();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "순서 변경에 실패했습니다.";
+      const message =
+        err instanceof Error ? err.message : "순서 변경에 실패했습니다.";
       addToast(message, "error");
     }
   };
@@ -181,9 +188,11 @@ function JukeboxApp() {
       {/* Nickname modal */}
       {modal.isOpen && (
         <NicknameModal
-          videoTitle={modal.videoTitle}
+          videoTitle={modal.trackTitle}
           onConfirm={handleNicknameConfirm}
-          onClose={() => setModal({ isOpen: false, videoId: "", videoTitle: "" })}
+          onClose={() =>
+            setModal({ isOpen: false, trackUri: "", trackTitle: "" })
+          }
           isLoading={isAdding}
         />
       )}
@@ -191,7 +200,6 @@ function JukeboxApp() {
   );
 }
 
-// Wrap with ToastProvider
 export default function Page() {
   return (
     <ToastProvider>

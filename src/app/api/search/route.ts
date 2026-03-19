@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchYouTube } from "@/lib/youtube";
+import { searchTracks } from "@/lib/spotify";
 
 export async function GET(request: NextRequest) {
   const query = request.nextUrl.searchParams.get("q");
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await searchYouTube(query.trim());
+    const results = await searchTracks(query.trim());
     return NextResponse.json({ items: results });
   } catch (err) {
     console.error("[/api/search]", err);

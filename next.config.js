@@ -4,11 +4,15 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "i.ytimg.com",
+        hostname: "i.scdn.co", // Spotify album art CDN
       },
       {
         protocol: "https",
-        hostname: "img.youtube.com",
+        hostname: "mosaic.scdn.co",
+      },
+      {
+        protocol: "https",
+        hostname: "*.scdn.co",
       },
     ],
   },

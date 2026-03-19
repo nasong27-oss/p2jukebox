@@ -14,7 +14,7 @@ export function Header() {
       <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-sm">
+          <div className="w-9 h-9 bg-[#1DB954] rounded-xl flex items-center justify-center shadow-sm">
             <Music2 className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -73,8 +73,8 @@ export function Header() {
             </div>
           ) : (
             <button
-              onClick={() => signIn("google", { callbackUrl: "/admin" })}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors"
+              onClick={() => signIn("spotify", { callbackUrl: "/admin" })}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#1DB954] hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
             >
               <LogIn className="w-4 h-4" />
               <span className="hidden sm:inline">관리자 로그인</span>
