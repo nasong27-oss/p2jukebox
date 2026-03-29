@@ -102,6 +102,7 @@ export async function searchTracks(query: string) {
 export async function fetchPlaylistTracks() {
   const token = await getClientToken();
   const playlistId = process.env.SPOTIFY_PLAYLIST_ID!;
+  console.log("[fetchPlaylistTracks] playlistId:", playlistId);;
 
   const items: SpotifyPlaylistItem[] = [];
   let nextUrl: string | null =
@@ -114,7 +115,7 @@ export async function fetchPlaylistTracks() {
       cache: "no-store",
     });
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) throw new Error(`${res.status} ${JSON.stringify(data.error)}`);
     items.push(...(data.items ?? []));
     nextUrl = (data.next as string | null) ?? null;
   }
