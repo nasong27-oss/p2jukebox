@@ -71,6 +71,7 @@ export async function getUserToken(): Promise<string> {
   const data = await res.json();
   if (!data.access_token)
     throw new Error(`User token refresh failed: ${JSON.stringify(data)}`);
+  console.log("[getUserToken] scope:", data.scope);
   return data.access_token;
 }
 
