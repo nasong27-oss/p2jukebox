@@ -138,6 +138,16 @@ export async function addTrackToPlaylist(trackUri: string) {
   const token = await getUserToken();
   const playlistId = process.env.SPOTIFY_PLAYLIST_ID!;
 
+  console.log("[addTrackToPlaylist] playlistId:", playlistId);
+
+  // Verify playlist ownership first
+  const checkRes = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=id,name,owner`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  const checkData = await checkRes.json();
+  console.log("[addTrackToPlaylist] playlist owner:", JSON.stringify(checkData.owner), "name:", checkData.name);
+
   const res = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`, {
     method: "POST",
     headers: {
