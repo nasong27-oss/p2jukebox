@@ -159,7 +159,12 @@ export async function addTrackToPlaylist(trackUri: string) {
     cache: "no-store",
   });
   const data = await res.json();
-  if (data.error) throw new Error(`Spotify ${res.status}: ${JSON.stringify(data.error)}`);
+  if (data.error) {
+    const headers: Record<string, string> = {};
+    res.headers.forEach((v, k) => { headers[k] = v; });
+    console.log("[addTrackToPlaylist] error headers:", JSON.stringify(headers));
+    throw new Error(`Spotify ${res.status}: ${JSON.stringify(data.error)}`);
+  }
   return data;
 }
 

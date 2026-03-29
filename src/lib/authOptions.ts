@@ -5,6 +5,7 @@ const SPOTIFY_SCOPES = [
   "playlist-modify-public",
   "playlist-modify-private",
   "user-read-email",
+  "user-read-private",
 ].join(" ");
 
 export const authOptions: NextAuthOptions = {
