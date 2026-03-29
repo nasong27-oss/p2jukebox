@@ -9,9 +9,14 @@ function basicAuth(): string {
 }
 
 export async function GET() {
-  const results: Record<string, unknown> = {};
+  const lines: string[] = [];
+
+  const playlistId = process.env.SPOTIFY_PLAYLIST_ID ?? "NOT SET";
+  lines.push(`PLAYLIST_ID: ${playlistId}`);
+  lines.push(`CLIENT_ID: ${(process.env.SPOTIFY_CLIENT_ID ?? "NOT SET").slice(0, 8)}...`);
 
   // 1. Client credentials token
+  let clientToken = "";
   try {
     const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
@@ -23,35 +28,40 @@ export async function GET() {
       cache: "no-store",
     });
     const tokenData = await tokenRes.json();
-    results.clientToken = tokenData.access_token
-      ? `OK (${tokenData.access_token.slice(0, 20)}...)`
-      : `FAIL: ${JSON.stringify(tokenData)}`;
-
     if (tokenData.access_token) {
-      // 2. GET /playlists/{id}
-      const playlistId = process.env.SPOTIFY_PLAYLIST_ID!;
-      const p1 = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=id,name,public,owner`, {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        cache: "no-store",
-      });
-      const p1Data = await p1.json();
-      results.playlistInfo = { status: p1.status, data: p1Data };
-
-      // 3. GET /playlists/{id}/tracks (no fields filter)
-      const p2 = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?limit=1`, {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` },
-        cache: "no-store",
-      });
-      const p2Data = await p2.json();
-      results.playlistTracks = { status: p2.status, data: p2Data };
+      clientToken = tokenData.access_token;
+      lines.push(`CLIENT_TOKEN: OK`);
+    } else {
+      lines.push(`CLIENT_TOKEN FAIL: ${JSON.stringify(tokenData)}`);
     }
   } catch (e) {
-    results.error = String(e);
+    lines.push(`CLIENT_TOKEN ERROR: ${e}`);
   }
 
-  // 4. Refresh token test
+  // 2. GET /playlists/{id} with client token
+  if (clientToken) {
+    const r = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=id,name,public`, {
+      headers: { Authorization: `Bearer ${clientToken}` },
+      cache: "no-store",
+    });
+    const d = await r.json();
+    lines.push(`GET /playlists: ${r.status} name=${d.name} public=${d.public} error=${d.error?.message ?? "none"}`);
+
+    // 3. GET /playlists/{id}/tracks
+    const r2 = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?limit=1`, {
+      headers: { Authorization: `Bearer ${clientToken}` },
+      cache: "no-store",
+    });
+    const d2 = await r2.json();
+    lines.push(`GET /playlists/tracks: ${r2.status} error=${d2.error?.message ?? "none"} total=${d2.total ?? "N/A"}`);
+  }
+
+  // 3. Refresh token
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
-  if (refreshToken) {
+  if (!refreshToken) {
+    lines.push("REFRESH_TOKEN: NOT SET");
+  } else {
+    lines.push(`REFRESH_TOKEN: set (${refreshToken.slice(0, 8)}...)`);
     try {
       const rRes = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -63,39 +73,32 @@ export async function GET() {
         cache: "no-store",
       });
       const rData = await rRes.json();
-      results.userToken = rData.access_token
-        ? `OK scope: ${rData.scope}`
-        : `FAIL: ${JSON.stringify(rData)}`;
-
       if (rData.access_token) {
-        // 5. GET /me
+        lines.push(`USER_TOKEN: OK scope=${rData.scope}`);
         const meRes = await fetch(`${SPOTIFY_API_BASE}/me`, {
           headers: { Authorization: `Bearer ${rData.access_token}` },
           cache: "no-store",
         });
         const meData = await meRes.json();
-        results.me = { status: meRes.status, id: meData.id, display_name: meData.display_name };
+        lines.push(`ME: ${meRes.status} id=${meData.id} name=${meData.display_name}`);
 
-        // 6. POST /playlists/{id}/tracks with fake URI (should give 400 if auth is OK)
-        const playlistId = process.env.SPOTIFY_PLAYLIST_ID!;
         const addRes = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${rData.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ uris: ["spotify:track:test"] }),
+          headers: { Authorization: `Bearer ${rData.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ uris: ["spotify:track:4iV5W9uYEdYUVa79Axb7Rh"] }),
           cache: "no-store",
         });
         const addData = await addRes.json();
-        results.addTrackTest = { status: addRes.status, data: addData };
+        lines.push(`POST /tracks: ${addRes.status} error=${addData.error?.message ?? "none"} snapshot=${addData.snapshot_id?.slice(0, 10) ?? "N/A"}`);
+      } else {
+        lines.push(`USER_TOKEN FAIL: ${JSON.stringify(rData)}`);
       }
     } catch (e) {
-      results.refreshTokenError = String(e);
+      lines.push(`USER_TOKEN ERROR: ${e}`);
     }
-  } else {
-    results.refreshToken = "NOT SET";
   }
 
-  return NextResponse.json(results);
+  return new NextResponse(lines.join("\n"), {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
 }
