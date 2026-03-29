@@ -77,7 +77,7 @@ export async function getUserToken(): Promise<string> {
 
 /** Search Spotify for tracks */
 export async function searchTracks(query: string) {
-  const token = await getUserToken();
+  const token = await getClientToken();
   const res = await fetch(
     `${SPOTIFY_API_BASE}/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
     {
@@ -100,7 +100,7 @@ export async function searchTracks(query: string) {
 
 /** Fetch all tracks in the configured Spotify playlist */
 export async function fetchPlaylistTracks() {
-  const token = await getUserToken();
+  const token = await getClientToken();
   const playlistId = process.env.SPOTIFY_PLAYLIST_ID!;
   console.log("[fetchPlaylistTracks] playlistId:", playlistId);;
 
