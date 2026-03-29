@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addTrackToPlaylist } from "@/lib/spotify";
 import { setNickname } from "@/lib/nicknameStore";
 
 export async function POST(request: NextRequest) {
@@ -19,17 +18,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "닉네임을 입력해주세요." }, { status: 400 });
   }
 
-  try {
-    const result = await addTrackToPlaylist(trackUri);
-
-    // Store nickname for display
-    setNickname(trackUri, `${nickname.trim()}이(가) 추가함`);
-
-    return NextResponse.json({ success: true, item: result });
-  } catch (err) {
-    console.error("[/api/playlist/add]", err);
-    const message =
-      err instanceof Error ? err.message : "곡 추가 중 오류가 발생했습니다.";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  setNickname(trackUri, `${nickname.trim()}이(가) 추가함`);
+  return NextResponse.json({ success: true });
 }

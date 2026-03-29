@@ -14,12 +14,26 @@ import type {
   NicknameModalState,
 } from "@/types";
 
+const SPOTIFY_API = "https://api.spotify.com/v1";
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+async function getSpotifyToken(): Promise<{ accessToken: string; playlistId: string }> {
+  const res = await fetch("/api/spotify-token");
+  if (!res.ok) throw new Error("토큰을 가져올 수 없습니다.");
+  return res.json();
+}
+
 function JukeboxApp() {
   const { data: session } = useSession();
   const { addToast } = useToast();
   const isAdmin = !!session;
 
-  // State
   const [searchResults, setSearchResults] = useState<TrackSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
@@ -31,15 +45,43 @@ function JukeboxApp() {
   });
   const [isAdding, setIsAdding] = useState(false);
 
-  // Fetch playlist
   const fetchPlaylist = useCallback(async () => {
     setIsPlaylistLoading(true);
     try {
-      const res = await fetch("/api/playlist/list");
-      const data = await res.json();
-      setPlaylist(data.items ?? []);
-    } catch {
-      addToast("플레이리스트를 불러오는 데 실패했습니다.", "error");
+      const { accessToken, playlistId } = await getSpotifyToken();
+
+      // Fetch tracks directly from Spotify (bypasses Vercel IP restriction)
+      const spotifyRes = await fetch(
+        `${SPOTIFY_API}/playlists/${playlistId}/tracks?limit=50&fields=next,items(track(id,uri,name,duration_ms,artists,album(images)))`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (!spotifyRes.ok) {
+        const err = await spotifyRes.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message ?? `Spotify ${spotifyRes.status}`);
+      }
+      const spotifyData = await spotifyRes.json();
+
+      // Get nicknames from server
+      const nicknameRes = await fetch("/api/playlist/list");
+      const { nicknames } = await nicknameRes.json() as { nicknames: Record<string, string> };
+
+      const items: PlaylistItem[] = (spotifyData.items ?? [])
+        .filter((item: { track: unknown }) => item.track)
+        .map((item: { track: { uri: string; id: string; name: string; duration_ms: number; artists: { name: string }[]; album: { images: { url: string }[] } } }, index: number) => ({
+          trackUri: item.track.uri,
+          trackId: item.track.id,
+          title: item.track.name,
+          thumbnail: item.track.album.images[0]?.url ?? "",
+          artistName: item.track.artists.map((a) => a.name).join(", "),
+          duration: formatDuration(item.track.duration_ms),
+          addedBy: nicknames?.[item.track.uri] ?? "",
+          position: index,
+        }));
+
+      setPlaylist(items);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "플레이리스트를 불러오는 데 실패했습니다.";
+      addToast(message, "error");
     } finally {
       setIsPlaylistLoading(false);
     }
@@ -49,92 +91,112 @@ function JukeboxApp() {
     fetchPlaylist();
   }, [fetchPlaylist]);
 
-  // Enrich search results with "already in playlist" info
   const playlistTrackUris = new Set(playlist.map((item) => item.trackUri));
   const enrichedResults = searchResults.map((r) => ({
     ...r,
     isInPlaylist: playlistTrackUris.has(r.trackUri),
   }));
 
-  // Handle add click – open nickname modal
   const handleAddClick = (track: TrackSearchResult) => {
     setModal({ isOpen: true, trackUri: track.trackUri, trackTitle: track.title });
   };
 
-  // Handle nickname confirm – add to playlist
   const handleNicknameConfirm = async (nickname: string) => {
     setIsAdding(true);
     try {
-      const res = await fetch("/api/playlist/add", {
+      const { accessToken, playlistId } = await getSpotifyToken();
+
+      // Add track directly via Spotify API from browser
+      const spotifyRes = await fetch(`${SPOTIFY_API}/playlists/${playlistId}/tracks`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ uris: [modal.trackUri] }),
+      });
+      if (!spotifyRes.ok) {
+        const err = await spotifyRes.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message ?? `Spotify ${spotifyRes.status}`);
+      }
+
+      // Store nickname on server
+      await fetch("/api/playlist/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trackUri: modal.trackUri, nickname }),
       });
-      const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error ?? "추가 실패");
-
-      addToast(
-        `"${modal.trackTitle.slice(0, 30)}..." 을(를) 추가했어요! 🎵`,
-        "success"
-      );
+      addToast(`"${modal.trackTitle.slice(0, 30)}..." 을(를) 추가했어요! 🎵`, "success");
       setModal({ isOpen: false, trackUri: "", trackTitle: "" });
       await fetchPlaylist();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "곡 추가에 실패했습니다.";
+      const message = err instanceof Error ? err.message : "곡 추가에 실패했습니다.";
       addToast(message, "error");
     } finally {
       setIsAdding(false);
     }
   };
 
-  // Admin: remove
   const handleRemove = async (item: PlaylistItem) => {
     if (!confirm(`"${item.title}" 을(를) 삭제하시겠습니까?`)) return;
     try {
-      const res = await fetch("/api/playlist/remove", {
+      const { accessToken, playlistId } = await getSpotifyToken();
+
+      // Remove track directly via Spotify API from browser
+      const spotifyRes = await fetch(`${SPOTIFY_API}/playlists/${playlistId}/tracks`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tracks: [{ uri: item.trackUri }] }),
+      });
+      if (!spotifyRes.ok) {
+        const err = await spotifyRes.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message ?? `Spotify ${spotifyRes.status}`);
+      }
+
+      // Delete nickname on server
+      await fetch("/api/playlist/remove", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trackUri: item.trackUri }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "삭제 실패");
+
       addToast("곡이 삭제되었습니다.", "info");
       await fetchPlaylist();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "삭제에 실패했습니다.";
+      const message = err instanceof Error ? err.message : "삭제에 실패했습니다.";
       addToast(message, "error");
     }
   };
 
-  // Admin: reorder
-  const handleReorder = async (
-    item: PlaylistItem,
-    direction: "up" | "down"
-  ) => {
+  const handleReorder = async (item: PlaylistItem, direction: "up" | "down") => {
     const rangeStart = item.position;
-    // Spotify: insertBefore is the index BEFORE which to insert
-    // Moving up: insert before the previous item (rangeStart - 1)
-    // Moving down: insert before the item two positions ahead (rangeStart + 2)
-    const insertBefore =
-      direction === "up" ? rangeStart - 1 : rangeStart + 2;
-
+    const insertBefore = direction === "up" ? rangeStart - 1 : rangeStart + 2;
     if (insertBefore < 0 || insertBefore > playlist.length) return;
 
     try {
-      const res = await fetch("/api/playlist/reorder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rangeStart, insertBefore }),
+      const { accessToken, playlistId } = await getSpotifyToken();
+
+      // Reorder directly via Spotify API from browser
+      const spotifyRes = await fetch(`${SPOTIFY_API}/playlists/${playlistId}/tracks`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ range_start: rangeStart, insert_before: insertBefore, range_length: 1 }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "순서 변경 실패");
+      if (!spotifyRes.ok) {
+        const err = await spotifyRes.json().catch(() => ({}));
+        throw new Error((err as { error?: { message?: string } }).error?.message ?? `Spotify ${spotifyRes.status}`);
+      }
+
       await fetchPlaylist();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "순서 변경에 실패했습니다.";
+      const message = err instanceof Error ? err.message : "순서 변경에 실패했습니다.";
       addToast(message, "error");
     }
   };
@@ -144,12 +206,9 @@ function JukeboxApp() {
       <Header />
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Search */}
         <section className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 space-y-4">
           <div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">
-              노래 검색
-            </h2>
+            <h2 className="font-semibold text-gray-900 dark:text-white">노래 검색</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               원하는 노래를 검색하고 플레이리스트에 추가하세요
             </p>
@@ -161,17 +220,12 @@ function JukeboxApp() {
           />
         </section>
 
-        {/* Search Results */}
         {(enrichedResults.length > 0 || isSearching) && (
           <section>
-            <SearchResults
-              results={enrichedResults}
-              onAddClick={handleAddClick}
-            />
+            <SearchResults results={enrichedResults} onAddClick={handleAddClick} />
           </section>
         )}
 
-        {/* Playlist */}
         <section>
           <PlaylistView
             items={playlist}
@@ -185,14 +239,11 @@ function JukeboxApp() {
         </section>
       </main>
 
-      {/* Nickname modal */}
       {modal.isOpen && (
         <NicknameModal
           videoTitle={modal.trackTitle}
           onConfirm={handleNicknameConfirm}
-          onClose={() =>
-            setModal({ isOpen: false, trackUri: "", trackTitle: "" })
-          }
+          onClose={() => setModal({ isOpen: false, trackUri: "", trackTitle: "" })}
           isLoading={isAdding}
         />
       )}
