@@ -147,7 +147,7 @@ export async function addTrackToPlaylist(trackUri: string) {
     cache: "no-store",
   });
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
+  if (data.error) throw new Error(`Spotify ${res.status}: ${JSON.stringify(data.error)}`);
   return data;
 }
 
