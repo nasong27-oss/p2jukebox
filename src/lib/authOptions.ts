@@ -2,6 +2,8 @@ import { NextAuthOptions } from "next-auth";
 import SpotifyProvider from "next-auth/providers/spotify";
 
 const SPOTIFY_SCOPES = [
+  "playlist-read-private",
+  "playlist-read-collaborative",
   "playlist-modify-public",
   "playlist-modify-private",
   "user-read-email",
