@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 function basicAuth(): string {
   return Buffer.from(
@@ -7,6 +9,19 @@ function basicAuth(): string {
 }
 
 export async function GET() {
+  const playlistId = process.env.SPOTIFY_PLAYLIST_ID;
+
+  // Try session access token first (direct from OAuth flow, not refreshed)
+  const session = await getServerSession(authOptions);
+  if (session?.accessToken) {
+    return NextResponse.json({
+      accessToken: session.accessToken,
+      playlistId,
+      source: "session",
+    });
+  }
+
+  // Fall back to refresh token
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
   if (!refreshToken) {
     return NextResponse.json(
@@ -38,6 +53,7 @@ export async function GET() {
 
   return NextResponse.json({
     accessToken: data.access_token,
-    playlistId: process.env.SPOTIFY_PLAYLIST_ID,
+    playlistId,
+    source: "refresh",
   });
 }
